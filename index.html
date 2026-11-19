@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Petualangan Puzzle Ceria PAUD - Game Edukasi 3D</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D World & Cute Cartoon Mascots -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts: Fredoka for playful, kid-friendly rounded typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Fredoka', sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background: linear-gradient(180deg, #60A5FA 0%, #93C5FD 50%, #FDE68A 100%);
+            min-height: 100vh;
+        }
+
+        /* 3D Canvas Background */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: auto;
+        }
+
+        /* Claymorphism & 3D Toy Card Style */
+        .toy-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            border: 5px solid #FFFFFF;
+            box-shadow: 
+                0 16px 32px rgba(30, 58, 138, 0.18),
+                inset 0 -8px 0 rgba(203, 213, 225, 0.6),
+                inset 0 6px 12px rgba(255, 255, 255, 0.9);
+        }
+
+        /* 3D Pushable Toy Button */
+        .btn-3d {
+            position: relative;
+            border-radius: 24px;
+            font-weight: 700;
+            transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateY(0);
+            cursor: pointer;
+        }
+
+        .btn-3d:active:not(:disabled) {
+            transform: translateY(6px);
+        }
+
+        .btn-3d-green {
+            background: linear-gradient(180deg, #4ADE80 0%, #22C55E 100%);
+            color: white;
+            border: 3px solid #86EFAC;
+            box-shadow: 0 8px 0 #15803D, 0 14px 20px rgba(21, 128, 61, 0.3);
+        }
+        .btn-3d-green:active:not(:disabled) {
+            box-shadow: 0 2px 0 #15803D, 0 4px 8px rgba(21, 128, 61, 0.3);
+        }
+        .btn-3d-green:disabled {
+            background: linear-gradient(180deg, #CBD5E1 0%, #94A3B8 100%);
+            border-color: #E2E8F0;
+            box-shadow: 0 6px 0 #64748B;
+            cursor: not-allowed;
+            opacity: 0.75;
+        }
+
+        .btn-3d-blue {
+            background: linear-gradient(180deg, #38BDF8 0%, #0284C7 100%);
+            color: white;
+            border: 3px solid #BAE6FD;
+            box-shadow: 0 8px 0 #0369A1, 0 12px 18px rgba(3, 105, 161, 0.25);
+        }
+        .btn-3d-blue:active:not(:disabled) {
+            box-shadow: 0 2px 0 #0369A1;
+        }
+
+        .btn-3d-yellow {
+            background: linear-gradient(180deg, #FACC15 0%, #EAB308 100%);
+            color: #713F12;
+            border: 3px solid #FEF08A;
+            box-shadow: 0 8px 0 #A16207, 0 12px 18px rgba(161, 98, 7, 0.25);
+        }
+        .btn-3d-yellow:active:not(:disabled) {
+            box-shadow: 0 2px 0 #A16207;
+        }
+
+        /* Puzzle Option Tile */
+        .puzzle-option {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+            border: 4px solid #E2E8F0;
+            border-radius: 26px;
+            box-shadow: 0 8px 0 #CBD5E1, 0 12px 20px rgba(15, 23, 42, 0.1);
+            transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+        }
+
+        .puzzle-option:hover:not(.disabled) {
+            transform: translateY(-4px) scale(1.02);
+            border-color: #38BDF8;
+            box-shadow: 0 12px 0 #7DD3FC, 0 16px 24px rgba(2, 132, 199, 0.18);
+        }
+
+        .puzzle-option:active:not(.disabled) {
+            transform: translateY(5px) scale(0.98);
+            box-shadow: 0 2px 0 #94A3B8;
+        }
+
+        .puzzle-option.correct-choice {
+            background: linear-gradient(180deg, #DCFCE7 0%, #86EFAC 100%);
+            border-color: #22C55E;
+            box-shadow: 0 8px 0 #16A34A;
+            animation: bouncePop 0.5s ease;
+        }
+
+        .puzzle-option.wrong-choice {
+            background: linear-gradient(180deg, #FEE2E2 0%, #FCA5A5 100%);
+            border-color: #EF4444;
+            box-shadow: 0 8px 0 #DC2626;
+            animation: gentleShake 0.45s ease;
+        }
+
+        .puzzle-option.disabled {
+            pointer-events: none;
+        }
+
+        /* Animations */
+        @keyframes bouncePop {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.1); }
+            70% { transform: scale(0.96); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes gentleShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-5px); }
+        }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .animate-float {
+            animation: floatSlow 3s ease-in-out infinite;
+        }
+
+        /* Confetti Canvas */
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* 3D Glossy Toy Shape Helper */
+        .glossy-sphere {
+            box-shadow: inset -6px -6px 14px rgba(0,0,0,0.22), inset 6px 6px 14px rgba(255,255,255,0.75), 0 8px 14px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body class="relative flex flex-col items-center justify-between min-h-screen p-3 sm:p-5 text-slate-800">
+
+    <!-- 3D Interactive Background & Mascot Stage -->
+    <canvas id="bg-canvas"></canvas>
+    <!-- Celebration Confetti Layer -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Floating Sound & Camera Hint Controls (Top Right) -->
+    <div class="relative z-20 w-full max-w-4xl flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2 bg-white/85 backdrop-blur-md px-3 py-1.5 rounded-full border-2 border-white shadow-sm">
+            <span class="text-xl">🧸</span>
+            <span class="text-xs sm:text-sm font-bold text-sky-700">PAUD Ceria 3D (Usia 3-6 Thn)</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btn-toggle-music" onclick="toggleMusic()" class="bg-white/90 hover:bg-white text-sky-600 p-2.5 rounded-full border-2 border-white shadow-md transition active:scale-95" title="Musik Latar">
+                <span id="music-icon" class="text-lg">🎵</span>
+            </button>
+            <button id="btn-toggle-sfx" onclick="toggleSfx()" class="bg-white/90 hover:bg-white text-amber-600 p-2.5 rounded-full border-2 border-white shadow-md transition active:scale-95" title="Efek Suara">
+                <span id="sfx-icon" class="text-lg">🔊</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="relative z-10 w-full max-w-3xl flex-1 flex flex-col items-center justify-center my-auto">
+
+        <!-- ========================================== -->
+        <!-- 1. LAYAR AWAL (START SCREEN)               -->
+        <!-- ========================================== -->
+        <section id="screen-start" class="w-full toy-card p-6 sm:p-8 text-center transition-all duration-300">
+            <!-- Mascot Preview Badge -->
+            <div class="inline-flex items-center justify-center gap-2 bg-amber-100 border-2 border-amber-300 px-4 py-1.5 rounded-full mb-3 animate-float">
+                <span class="text-2xl">🐻</span>
+                <span class="text-2xl">🐰</span>
+                <span class="text-2xl">🦁</span>
+                <span class="text-2xl">🦉</span>
+                <span class="text-sm font-bold text-amber-800">Teman-Teman 3D Siap Bermain!</span>
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl font-bold text-sky-600 drop-shadow-sm tracking-tight mb-2">
+                Petualangan Puzzle Ceria
+            </h1>
+            <p class="text-base sm:text-lg text-slate-600 font-medium mb-6 max-w-xl mx-auto">
+                Ayo bermain sambil belajar <span class="text-rose-500 font-bold">Warna</span>, 
+                <span class="text-amber-500 font-bold">Bentuk</span>, 
+                <span class="text-emerald-600 font-bold">Angka</span>, dan 
+                <span class="text-purple-600 font-bold">Logika</span> bersama hewan-hewan lucu!
+            </p>
+
+            <!-- Category Pills -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6 max-w-lg mx-auto">
+                <div class="bg-rose-100 border-2 border-rose-300 rounded-2xl p-2.5 flex flex-col items-center">
+                    <span class="text-2xl mb-1">🎨</span>
+                    <span class="text-xs sm:text-sm font-bold text-rose-700">Warna</span>
+                </div>
+                <div class="bg-amber-100 border-2 border-amber-300 rounded-2xl p-2.5 flex flex-col items-center">
+                    <span class="text-2xl mb-1">⭐</span>
+                    <span class="text-xs sm:text-sm font-bold text-amber-700">Bentuk</span>
+                </div>
+                <div class="bg-emerald-100 border-2 border-emerald-300 rounded-2xl p-2.5 flex flex-col items-center">
+                    <span class="text-2xl mb-1">🔢</span>
+                    <span class="text-xs sm:text-sm font-bold text-emerald-700">Angka</span>
+                </div>
+                <div class="bg-purple-100 border-2 border-purple-300 rounded-2xl p-2.5 flex flex-col items-center">
+                    <span class="text-2xl mb-1">🧩</span>
+                    <span class="text-xs sm:text-sm font-bold text-purple-700">Logika</span>
+                </div>
+            </div>
+
+            <!-- Mandatory Player Name Input -->
+            <div class="max-w-md mx-auto bg-sky-50/90 border-3 border-sky-200 rounded-3xl p-4 sm:p-5 mb-6 shadow-inner">
+                <label for="player-name-input" class="block text-base sm:text-lg font-bold text-sky-800 mb-2">
+                    Siapa nama adik hebat hari ini? ✏️
+                </label>
+                <input 
+                    type="text" 
+                    id="player-name-input" 
+                    maxlength="18"
+                    placeholder="Ketik namamu di sini..." 
+                    autocomplete="off"
+                    class="w-full text-center text-xl sm:text-2xl font-bold text-slate-800 bg-white border-4 border-sky-300 focus:border-amber-400 focus:outline-none rounded-2xl py-3 px-4 shadow-sm transition placeholder:text-slate-300"
+                >
+                <p id="name-helper-text" class="text-xs sm:text-sm text-sky-600 font-semibold mt-2">
+                    *Isi nama dulu ya supaya tombol bermain menyala! 🌟
+                </p>
+            </div>
+
+            <!-- Start Button (Disabled until name is entered) -->
+            <button 
+                id="btn-start-game" 
+                disabled
+                onclick="startGame()"
+                class="btn-3d btn-3d-green w-full max-w-sm py-4 px-8 text-xl sm:text-2xl tracking-wide flex items-center justify-center gap-3 mx-auto"
+            >
+                <span>🚀</span>
+                <span>Mulai Bermain!</span>
+            </button>
+
+            <p class="text-xs text-slate-400 mt-4">
+                💡 Tips: Geser layar di area luar kotak untuk memutar dunia 3D!
+            </p>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 2. LAYAR PERMAINAN UTAMA (GAMEPLAY SCREEN) -->
+        <!-- ========================================== -->
+        <section id="screen-game" class="hidden w-full flex flex-col gap-3 sm:gap-4">
+            
+            <!-- Top HUD: Player Name, Question Progress (1/20), and Score -->
+            <div class="toy-card px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-2">
+                <!-- Player Info -->
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-300 to-orange-400 border-2 border-white shadow flex items-center justify-center text-2xl">
+                        🧒
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pemain</div>
+                        <div id="hud-player-name" class="text-base sm:text-lg font-bold text-slate-800 truncate max-w-[120px] sm:max-w-[160px]">Adik</div>
+                    </div>
+                </div>
+
+                <!-- Progress Pill -->
+                <div class="flex flex-col items-center">
+                    <div class="bg-sky-100 border-2 border-sky-300 px-4 py-1 rounded-full">
+                        <span class="text-xs sm:text-sm font-bold text-sky-700">Soal </span>
+                        <span id="hud-question-num" class="text-base sm:text-lg font-bold text-sky-900">1</span>
+                        <span class="text-xs sm:text-sm font-bold text-sky-700"> / 20</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="w-28 sm:w-36 h-2.5 bg-slate-200 rounded-full overflow-hidden mt-1.5 border border-slate-300">
+                        <div id="hud-progress-bar" class="h-full bg-gradient-to-r from-sky-400 to-emerald-400 transition-all duration-300" style="width: 5%;"></div>
+                    </div>
+                </div>
+
+                <!-- Score Badge -->
+                <div class="flex items-center gap-2 bg-amber-50 border-2 border-amber-300 px-3.5 py-1.5 rounded-2xl shadow-sm">
+                    <span class="text-2xl">⭐</span>
+                    <div>
+                        <div class="text-[10px] sm:text-xs font-bold text-amber-700 uppercase">Poin</div>
+                        <div id="hud-score" class="text-lg sm:text-2xl font-bold text-amber-600 leading-none">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question & Puzzle Board Card -->
+            <div class="toy-card p-5 sm:p-7 relative overflow-hidden">
+                <!-- Category Badge & Mascot Reaction Header -->
+                <div class="flex items-center justify-between gap-2 mb-4">
+                    <span id="question-category-badge" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-rose-100 text-rose-700 border-2 border-rose-300">
+                        <span>🎨</span> <span>Mengenal Warna</span>
+                    </span>
+
+                    <!-- Interactive Cartoon Mascot Reaction Pill -->
+                    <div id="mascot-speech-pill" class="flex items-center gap-2 bg-sky-50 border-2 border-sky-200 px-3 py-1 rounded-full">
+                        <span id="mascot-emoji" class="text-2xl transition-transform duration-300">🐻</span>
+                        <span id="mascot-hint" class="text-xs sm:text-sm font-bold text-sky-700">Ayo tebak!</span>
+                    </div>
+                </div>
+
+                <!-- Question Prompt Text -->
+                <h2 id="question-text" class="text-xl sm:text-2xl md:text-3xl font-bold text-center text-slate-800 mb-4 leading-snug">
+                    Memuat pertanyaan...
+                </h2>
+
+                <!-- Visual Puzzle Stage (3D-style SVG / Toys / Patterns) -->
+                <div id="puzzle-visual-stage" class="w-full min-h-[140px] sm:min-h-[165px] bg-gradient-to-b from-sky-50 to-indigo-50/70 border-4 border-dashed border-sky-200 rounded-3xl p-4 mb-5 flex items-center justify-center">
+                    <!-- Dynamic Visual Content Injected Here -->
+                </div>
+
+                <!-- 4 Big Kid-Friendly Answer Buttons (2x2 Grid) -->
+                <div id="options-grid" class="grid grid-cols-2 gap-3 sm:gap-4">
+                    <!-- Dynamic Options Injected Here -->
+                </div>
+
+                <!-- Feedback Banner (Appears immediately after answering) -->
+                <div id="feedback-box" class="hidden mt-5 rounded-3xl p-4 sm:p-5 border-4 transition-all duration-300">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 text-center sm:text-left">
+                            <span id="feedback-icon" class="text-4xl sm:text-5xl animate-bounce">🎉</span>
+                            <div>
+                                <div id="feedback-title" class="text-lg sm:text-xl font-bold">Hebat Sekali! (+10 Poin)</div>
+                                <p id="feedback-message" class="text-sm sm:text-base font-medium mt-0.5">Penjelasan singkat di sini.</p>
+                            </div>
+                        </div>
+                        <button id="btn-next-question" onclick="nextQuestion()" class="btn-3d btn-3d-blue px-6 py-3 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto">
+                            Lanjut ➡️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 3. LAYAR RINGKASAN SKOR (END SCREEN)       -->
+        <!-- ========================================== -->
+        <section id="screen-end" class="hidden w-full toy-card p-6 sm:p-8 text-center">
+            <div class="inline-flex items-center justify-center gap-2 bg-emerald-100 border-2 border-emerald-300 px-4 py-1.5 rounded-full mb-3">
+                <span class="text-xl">🏆</span>
+                <span class="text-sm font-bold text-emerald-800">Petualangan Selesai!</span>
+            </div>
+
+            <h2 id="end-congrats-title" class="text-2xl sm:text-4xl font-bold text-sky-600 mb-2">
+                Selamat, Adik Hebat!
+            </h2>
+            <p id="end-subtitle" class="text-base sm:text-lg text-slate-600 font-medium mb-5">
+                Kamu sudah menyelesaikan semua 20 puzzle ceria!
+            </p>
+
+            <!-- Star Rating Display -->
+            <div id="end-stars" class="flex items-center justify-center gap-3 text-5xl sm:text-6xl my-4">
+                <span>⭐</span>
+                <span>⭐</span>
+                <span>⭐</span>
+            </div>
+
+            <!-- Final Score Card -->
+            <div class="max-w-md mx-auto bg-gradient-to-b from-amber-50 to-orange-50 border-4 border-amber-300 rounded-3xl p-5 mb-6 shadow-inner">
+                <div class="text-sm font-bold text-amber-800 uppercase tracking-wider mb-1">Total Skor Akhir</div>
+                <div id="end-final-score" class="text-5xl sm:text-6xl font-bold text-amber-500 drop-shadow-sm mb-4">
+                    200
+                </div>
+
+                <!-- Correct & Wrong Stats -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white/90 border-2 border-emerald-200 rounded-2xl p-3">
+                        <div class="text-2xl mb-0.5">✅</div>
+                        <div class="text-xs font-bold text-slate-500">Jawaban Benar</div>
+                        <div id="end-correct-count" class="text-xl sm:text-2xl font-bold text-emerald-600">0</div>
+                    </div>
+                    <div class="bg-white/90 border-2 border-rose-200 rounded-2xl p-3">
+                        <div class="text-2xl mb-0.5">❌</div>
+                        <div class="text-xs font-bold text-slate-500">Jawaban Salah</div>
+                        <div id="end-wrong-count" class="text-xl sm:text-2xl font-bold text-rose-500">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mascot Celebration Message -->
+            <div class="flex items-center justify-center gap-3 bg-sky-50 border-2 border-sky-200 rounded-2xl p-3.5 max-w-md mx-auto mb-6">
+                <span class="text-4xl">🦁</span>
+                <p id="end-mascot-quote" class="text-sm sm:text-base font-bold text-sky-800 text-left">
+                    "Wah, kamu pintar sekali! Ayo main lagi dengan soal puzzle baru!"
+                </p>
+            </div>
+
+            <!-- Play Again Button -->
+            <button onclick="restartGame()" class="btn-3d btn-3d-yellow w-full max-w-sm py-4 px-8 text-xl sm:text-2xl flex items-center justify-center gap-3 mx-auto">
+                <span>🔄</span>
+                <span>Main Lagi!</span>
+            </button>
+        </section>
+
+    </main>
+
+    <!-- Footer Spacer -->
+    <footer class="relative z-10 text-center text-xs font-semibold text-sky-900/70 mt-3">
+        Belajar Sambil Bermain • Puzzle Warna, Bentuk, Angka & Logika
+    </footer>
+
+    <script>
+        /* =========================================================================
+         * 1. WEB AUDIO API SOUND EFFECTS & CHEERFUL BACKGROUND MELODY
+         * ========================================================================= */
+        const SoundEngine = {
+            ctx: null,
+            sfxEnabled: true,
+            musicEnabled: false,
+            musicInterval: null,
+            noteIndex: 0,
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+
+            playTone(freq, type, duration, startTimeOffset = 0, gainVal = 0.18) {
+                if (!this.sfxEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime + startTimeOffset;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.exponentialRampToValueAtTime(gainVal, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + duration + 0.03);
+            },
+
+            playClick() {
+                this.playTone(523.25, 'sine', 0.12, 0, 0.15); // C5
+                this.playTone(659.25, 'sine', 0.12, 0.05, 0.12); // E5
+            },
+
+            playCorrect() {
+                // Happy major arpeggio chime
+                this.playTone(523.25, 'triangle', 0.18, 0.00, 0.22); // C5
+                this.playTone(659.25, 'triangle', 0.18, 0.10, 0.22); // E5
+                this.playTone(783.99, 'triangle', 0.18, 0.20, 0.22); // G5
+                this.playTone(1046.50, 'sine', 0.40, 0.30, 0.25);   // C6
+            },
+
+            playWrong() {
+                // Gentle, non-scary "boing" descending tone for young kids
+                this.playTone(349.23, 'sine', 0.22, 0.00, 0.18); // F4
+                this.playTone(293.66, 'sine', 0.30, 0.16, 0.18); // D4
+            },
+
+            playVictory() {
+                const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+                notes.forEach((n, idx) => {
+                    this.playTone(n, 'triangle', 0.22, idx * 0.13, 0.22);
+                });
+            },
+
+            startMusic() {
+                if (this.musicInterval) return;
+                this.init();
+                // Simple cheerful nursery-style pentatonic melody
+                const melody = [
+                    523.25, 587.33, 659.25, 523.25,
+                    659.25, 698.46, 783.99, 0,
+                    783.99, 880.00, 783.99, 698.46,
+                    659.25, 587.33, 523.25, 0
+                ];
+                this.musicInterval = setInterval(() => {
+                    if (!this.musicEnabled) return;
+                    const freq = melody[this.noteIndex % melody.length];
+                    if (freq > 0) {
+                        this.init();
+                        const now = this.ctx.currentTime;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now);
+                        gain.gain.setValueAtTime(0.001, now);
+                        gain.gain.exponentialRampToValueAtTime(0.05, now + 0.03);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.35);
+                    }
+                    this.noteIndex++;
+                }, 400);
+            },
+
+            stopMusic() {
+                if (this.musicInterval) {
+                    clearInterval(this.musicInterval);
+                    this.musicInterval = null;
+                }
+            }
+        };
+
+        function toggleSfx() {
+            SoundEngine.sfxEnabled = !SoundEngine.sfxEnabled;
+            document.getElementById('sfx-icon').textContent = SoundEngine.sfxEnabled ? '🔊' : '🔇';
+            if (SoundEngine.sfxEnabled) SoundEngine.playClick();
+        }
+
+        function toggleMusic() {
+            SoundEngine.musicEnabled = !SoundEngine.musicEnabled;
+            document.getElementById('music-icon').textContent = SoundEngine.musicEnabled ? '🎵' : '🔕';
+            if (SoundEngine.musicEnabled) {
+                SoundEngine.startMusic();
+            } else {
+                SoundEngine.stopMusic();
+            }
+        }
+
+        /* =========================================================================
+         * 2. THREE.JS 3D WORLD & CUTE CARTOON MASCOTS (BEAR, BUNNY, CLOUDS, ISLAND)
+         * ========================================================================= */
+        let scene, camera, renderer;
+        let mascotBear, mascotBunny;
+        let floatingBlocks = [];
+        let clouds = [];
+        let mascotMood = 'idle'; // 'idle', 'happy', 'encourage'
+        let moodTimer = 0;
+
+        // Camera Orbit Interaction Variables
+        let isDraggingCamera = false;
+        let prevMouseX = 0;
+        let cameraAngleY = 0;
+
+        function init3DWorld() {
+            const canvas = document.getElementById('bg-canvas');
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 2.2, 11);
+            camera.lookAt(0, 0.8, 0);
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+
+            // Bright & Warm Toy Lighting
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0xfde68a, 0.95);
+            hemiLight.position.set(0, 20, 0);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+            dirLight.position.set(6, 12, 8);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // Floating Grassy Island Platform at the bottom
+            const islandGroup = new THREE.Group();
+            const grassGeo = new THREE.CylinderGeometry(6.5, 5.8, 0.8, 32);
+            const grassMat = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.4 });
+            const grassMesh = new THREE.Mesh(grassGeo, grassMat);
+            grassMesh.position.y = -3.2;
+            islandGroup.add(grassMesh);
+
+            const dirtGeo = new THREE.CylinderGeometry(5.8, 3.2, 1.8, 32);
+            const dirtMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.6 });
+            const dirtMesh = new THREE.Mesh(dirtGeo, dirtMat);
+            dirtMesh.position.y = -4.5;
+            islandGroup.add(dirtMesh);
+            scene.add(islandGroup);
+
+            // Create Cute 3D Cartoon Bear (Left Side)
+            mascotBear = createCuteBear();
+            mascotBear.position.set(-4.3, -1.7, 1.2);
+            mascotBear.rotation.y = 0.45;
+            scene.add(mascotBear);
+
+            // Create Cute 3D Cartoon Bunny (Right Side)
+            mascotBunny = createCuteBunny();
+            mascotBunny.position.set(4.3, -1.7, 1.2);
+            mascotBunny.rotation.y = -0.45;
+            scene.add(mascotBunny);
+
+            // Create Floating 3D Geometric Toy Blocks (Colors & Shapes)
+            const toySpecs = [
+                { geo: new THREE.BoxGeometry(0.75, 0.75, 0.75), color: 0xf43f5e, pos: [-5.2, 2.5, -2.5] },
+                { geo: new THREE.SphereGeometry(0.48, 24, 24), color: 0xfacc15, pos: [5.3, 2.7, -2.2] },
+                { geo: new THREE.ConeGeometry(0.5, 0.85, 24), color: 0x38bdf8, pos: [-4.6, 0.5, -3.5] },
+                { geo: new THREE.TorusGeometry(0.4, 0.16, 16, 32), color: 0xa855f7, pos: [4.8, 0.6, -3.2] },
+                { geo: new THREE.OctahedronGeometry(0.5), color: 0x22c55e, pos: [0, 3.6, -4.0] }
+            ];
+
+            toySpecs.forEach((spec, i) => {
+                const mat = new THREE.MeshStandardMaterial({ color: spec.color, roughness: 0.25, metalness: 0.05 });
+                const mesh = new THREE.Mesh(spec.geo, mat);
+                mesh.position.set(...spec.pos);
+                mesh.userData = { baseY: spec.pos[1], phase: i * 1.3 };
+                scene.add(mesh);
+                floatingBlocks.push(mesh);
+            });
+
+            // Create Fluffy 3D Clouds
+            const cloudPositions = [
+                [-4.5, 4.0, -6], [4.2, 4.3, -6.5], [0, 4.7, -7.5]
+            ];
+            cloudPositions.forEach((pos, idx) => {
+                const cloud = createFluffyCloud();
+                cloud.position.set(...pos);
+                cloud.userData = { baseX: pos[0], phase: idx * 2 };
+                scene.add(cloud);
+                clouds.push(cloud);
+            });
+
+            // Mouse & Touch Camera Angle Controls
+            window.addEventListener('mousedown', (e) => {
+                if (e.target === canvas) {
+                    isDraggingCamera = true;
+                    prevMouseX = e.clientX;
+                }
+            });
+            window.addEventListener('mouseup', () => { isDraggingCamera = false; });
+            window.addEventListener('mousemove', (e) => {
+                if (isDraggingCamera) {
+                    const deltaX = e.clientX - prevMouseX;
+                    cameraAngleY += deltaX * 0.005;
+                    cameraAngleY = Math.max(-0.55, Math.min(0.55, cameraAngleY));
+                    prevMouseX = e.clientX;
+                }
+            });
+
+            window.addEventListener('touchstart', (e) => {
+                if (e.target === canvas && e.touches.length === 1) {
+                    isDraggingCamera = true;
+                    prevMouseX = e.touches[0].clientX;
+                }
+            }, { passive: true });
+            window.addEventListener('touchend', () => { isDraggingCamera = false; });
+            window.addEventListener('touchmove', (e) => {
+                if (isDraggingCamera && e.touches.length === 1) {
+                    const deltaX = e.touches[0].clientX - prevMouseX;
+                    cameraAngleY += deltaX * 0.006;
+                    cameraAngleY = Math.max(-0.55, Math.min(0.55, cameraAngleY));
+                    prevMouseX = e.touches[0].clientX;
+                }
+            }, { passive: true });
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createCuteBear() {
+            const group = new THREE.Group();
+            const brownMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.45 });
+            const creamMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.4 });
+            const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2 });
+            const pinkMat = new THREE.MeshStandardMaterial({ color: 0xfb7185, roughness: 0.3 });
+
+            // Body
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.85, 24, 24), brownMat);
+            body.scale.set(1, 1.1, 0.9);
+            group.add(body);
+
+            // Belly patch
+            const belly = new THREE.Mesh(new THREE.SphereGeometry(0.58, 20, 20), creamMat);
+            belly.position.set(0, -0.05, 0.48);
+            group.add(belly);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.78, 24, 24), brownMat);
+            head.position.set(0, 1.25, 0.05);
+            group.add(head);
+
+            // Ears
+            const earGeo = new THREE.SphereGeometry(0.28, 16, 16);
+            const leftEar = new THREE.Mesh(earGeo, brownMat);
+            leftEar.position.set(-0.58, 1.85, 0);
+            const rightEar = new THREE.Mesh(earGeo, brownMat);
+            rightEar.position.set(0.58, 1.85, 0);
+            group.add(leftEar, rightEar);
+
+            // Snout
+            const snout = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), creamMat);
+            snout.position.set(0, 1.15, 0.68);
+            group.add(snout);
+
+            // Nose
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 12), blackMat);
+            nose.position.set(0, 1.25, 0.96);
+            group.add(nose);
+
+            // Eyes & Cheeks
+            const eyeGeo = new THREE.SphereGeometry(0.09, 12, 12);
+            const leftEye = new THREE.Mesh(eyeGeo, blackMat);
+            leftEye.position.set(-0.26, 1.38, 0.72);
+            const rightEye = new THREE.Mesh(eyeGeo, blackMat);
+            rightEye.position.set(0.26, 1.38, 0.72);
+            group.add(leftEye, rightEye);
+
+            const cheekGeo = new THREE.SphereGeometry(0.11, 12, 12);
+            const leftCheek = new THREE.Mesh(cheekGeo, pinkMat);
+            leftCheek.position.set(-0.42, 1.22, 0.65);
+            const rightCheek = new THREE.Mesh(cheekGeo, pinkMat);
+            rightCheek.position.set(0.42, 1.22, 0.65);
+            group.add(leftCheek, rightCheek);
+
+            return group;
+        }
+
+        function createCuteBunny() {
+            const group = new THREE.Group();
+            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
+            const pinkMat = new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.35 });
+            const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2 });
+
+            // Body
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.78, 24, 24), whiteMat);
+            body.scale.set(0.95, 1.1, 0.9);
+            group.add(body);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.72, 24, 24), whiteMat);
+            head.position.set(0, 1.2, 0.05);
+            group.add(head);
+
+            // Long Bunny Ears
+            const earGeo = new THREE.CylinderGeometry(0.16, 0.2, 0.95, 16);
+            const leftEar = new THREE.Mesh(earGeo, whiteMat);
+            leftEar.position.set(-0.28, 2.15, 0);
+            leftEar.rotation.z = 0.14;
+            const rightEar = new THREE.Mesh(earGeo, whiteMat);
+            rightEar.position.set(0.28, 2.15, 0);
+            rightEar.rotation.z = -0.14;
+            group.add(leftEar, rightEar);
+
+            // Nose & Eyes
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 12), pinkMat);
+            nose.position.set(0, 1.18, 0.74);
+            group.add(nose);
+
+            const eyeGeo = new THREE.SphereGeometry(0.09, 12, 12);
+            const leftEye = new THREE.Mesh(eyeGeo, blackMat);
+            leftEye.position.set(-0.25, 1.32, 0.68);
+            const rightEye = new THREE.Mesh(eyeGeo, blackMat);
+            rightEye.position.set(0.25, 1.32, 0.68);
+            group.add(leftEye, rightEye);
+
+            return group;
+        }
+
+        function createFluffyCloud() {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+            const puff1 = new THREE.Mesh(new THREE.SphereGeometry(0.65, 16, 16), mat);
+            const puff2 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), mat);
+            puff2.position.set(-0.55, -0.1, 0);
+            const puff3 = new THREE.Mesh(new THREE.SphereGeometry(0.52, 16, 16), mat);
+            puff3.position.set(0.55, -0.1, 0);
+            group.add(puff1, puff2, puff3);
+            return group;
+        }
+
+        function triggerMascotReaction(mood) {
+            mascotMood = mood;
+            moodTimer = 90; // frames
+        }
+
+        function onWindowResize() {
+            if (!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            const time = Date.now() * 0.002;
+
+            // Smooth camera orbit
+            const radius = 11;
+            camera.position.x = Math.sin(cameraAngleY) * radius;
+            camera.position.z = Math.cos(cameraAngleY) * radius;
+            camera.lookAt(0, 0.5, 0);
+
+            // Floating 3D Toys rotation & bobbing
+            floatingBlocks.forEach((mesh) => {
+                mesh.rotation.x += 0.01;
+                mesh.rotation.y += 0.015;
+                mesh.position.y = mesh.userData.baseY + Math.sin(time + mesh.userData.phase) * 0.25;
+            });
+
+            // Drifting Clouds
+            clouds.forEach((cloud) => {
+                cloud.position.x = cloud.userData.baseX + Math.sin(time * 0.4 + cloud.userData.phase) * 0.6;
+            });
+
+            // Mascot Animations based on mood
+            if (mascotBear && mascotBunny) {
+                if (mascotMood === 'happy' && moodTimer > 0) {
+                    const jump = Math.abs(Math.sin(time * 6)) * 0.75;
+                    mascotBear.position.y = -1.7 + jump;
+                    mascotBunny.position.y = -1.7 + jump;
+                    mascotBear.rotation.z = Math.sin(time * 8) * 0.15;
+                    mascotBunny.rotation.z = -Math.sin(time * 8) * 0.15;
+                    moodTimer--;
+                } else if (mascotMood === 'encourage' && moodTimer > 0) {
+                    mascotBear.position.y = -1.7;
+                    mascotBunny.position.y = -1.7;
+                    mascotBear.rotation.z = Math.sin(time * 5) * 0.12;
+                    mascotBunny.rotation.z = Math.sin(time * 5) * 0.12;
+                    moodTimer--;
+                } else {
+                    mascotMood = 'idle';
+                    mascotBear.position.y = -1.7 + Math.sin(time * 1.5) * 0.08;
+                    mascotBunny.position.y = -1.7 + Math.cos(time * 1.5) * 0.08;
+                    mascotBear.rotation.z = 0;
+                    mascotBunny.rotation.z = 0;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        /* =========================================================================
+         * 3. RICH 20-QUESTION RANDOMIZED PUZZLE GENERATOR (4 PAUD CATEGORIES)
+         * ========================================================================= */
+        // Helper to generate glossy 3D-style SVG shapes
+        function renderShapeSVG(shape, color, size = 64) {
+            const gradId = 'g_' + shape + '_' + color.replace('#', '') + '_' + Math.floor(Math.random() * 10000);
+            let shapeEl = '';
+            if (shape === 'circle') {
+                shapeEl = `<circle cx="50" cy="50" r="38" fill="url(#${gradId})" stroke="#ffffff" stroke-width="4"/>`;
+            } else if (shape === 'square') {
+                shapeEl = `<rect x="14" y="14" width="72" height="72" rx="16" fill="url(#${gradId})" stroke="#ffffff" stroke-width="4"/>`;
+            } else if (shape === 'triangle') {
+                shapeEl = `<polygon points="50,12 88,84 12,84" stroke-linejoin="round" fill="url(#${gradId})" stroke="#ffffff" stroke-width="4"/>`;
+            } else if (shape === 'star') {
+                shapeEl = `<polygon points="50,10 61,36 90,39 68,58 75,86 50,71 25,86 32,58 10,39 39,36" stroke-linejoin="round" fill="url(#${gradId})" stroke="#ffffff" stroke-width="3"/>`;
+            } else if (shape === 'heart') {
+                shapeEl = `<path d="M50 84 C50 84 12 60 12 34 C12 20 23 12 35 12 C43 12 48 17 50 22 C52 17 57 12 65 12 C77 12 88 20 88 34 C88 60 50 84 50 84 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="3"/>`;
+            } else if (shape === 'diamond') {
+                shapeEl = `<polygon points="50,10 86,50 50,90 14,50" stroke-linejoin="round" fill="url(#${gradId})" stroke="#ffffff" stroke-width="4"/>`;
+            }
+
+            return `
+                <svg width="${size}" height="${size}" viewBox="0 0 100 100" class="drop-shadow-md inline-block">
+                    <defs>
+                        <radialGradient id="${gradId}" cx="35%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.65"/>
+                            <stop offset="35%" stop-color="${color}"/>
+                            <stop offset="100%" stop-color="${color}"/>
+                        </radialGradient>
+                    </defs>
+                    ${shapeEl}
+                    <ellipse cx="38" cy="28" rx="10" ry="5" transform="rotate(-25 38 28)" fill="rgba(255,255,255,0.55)"/>
+                </svg>
+            `;
+        }
+
+        // Complete Bank of Kid-Friendly PAUD Questions (32 templates, 20 randomly selected each game)
+        function buildQuestionPool() {
+            const pool = [
+                // --- KATEGORI 1: MENGENAL WARNA (8 Soal) ---
+                {
+                    category: 'Mengenal Warna',
+                    badgeClass: 'bg-rose-100 text-rose-700 border-rose-300',
+                    icon: '🎨',
+                    prompt: 'Buah apel ini berwarna apa ya?',
+                    visual: `<div class="flex flex-col items-center"><span class="text-7xl sm:text-8xl drop-shadow-md animate-float">🍎</span></div>`,
+                    options: [
+                        { label: 'Merah', visual: `<span class="w-10 h-10 rounded-full bg-red-500 glossy-sphere inline-block"></span>`, isCorrect: true },
+                        { label: 'Biru', visual: `<span class="w-10 h-10 rounded-full bg-blue-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Kuning', visual: `<span class="w-10 h-10 rounded-full bg-yellow-400 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Ungu', visual: `<span class="w-10 h-10 rounded-full bg-purple-500 glossy-sphere inline-block"></span>`, isCorrect: false }
+                    ],
+                    explanation: 'Apel segar berwarna Merah cerah!'
+                },
+                {
+                    category: 'Mengenal Warna',
+                    badgeClass: 'bg-rose-100 text-rose-700 border-rose-300',
+                    icon: '🎨',
+                    prompt: 'Manakah benda yang berwarna Kuning seperti matahari?',
+                    visual: `<div class="flex items-center gap-3"><span class="text-6xl sm:text-7xl animate-float">☀️</span><span class="text-2xl font-bold text-amber-600">= ?</span></div>`,
+                    options: [
+                        { label: 'Pisang', visual: `<span class="text-4xl">🍌</span>`, isCorrect: true },
+                        { label: 'Terong', visual: `<span class="text-4xl">🍆</span>`, isCorrect: false },
+                        { label: 'Brokoli', visual: `<span class="text-4xl">🥦</span>`, isCorrect: false },
+                        { label: 'Stroberi', visual: `<span class="text-4xl">🍓</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Pisang berwarna Kuning cerah seperti matahari!'
+                },
+                {
+                    category: 'Mengenal Warna',
+                    badgeClass: 'bg-rose-100 text-rose-700 border-rose-300',
+                    icon: '🎨',
+                    prompt: 'Daun pohon dan katak lucu ini berwarna apa?',
+                    visual: `<div class="flex items-center gap-5"><span class="text-6xl sm:text-7xl">🐸</span><span class="text-6xl sm:text-7xl">🍃</span></div>`,
+                    options: [
+                        { label: 'Hijau', visual: `<span class="w-10 h-10 rounded-full bg-emerald-500 glossy-sphere inline-block"></span>`, isCorrect: true },
+                        { label: 'Oranye', visual: `<span class="w-10 h-10 rounded-full bg-orange-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Merah Muda', visual: `<span class="w-10 h-10 rounded-full bg-pink-400 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Hitam', visual: `<span class="w-10 h-10 rounded-full bg-slate-800 glossy-sphere inline-block"></span>`, isCorrect: false }
+                    ],
+                    explanation: 'Katak dan daun berwarna Hijau!'
+                },
+                {
+                    category: 'Mengenal Warna',
+                    badgeClass: 'bg-rose-100 text-rose-700 border-rose-300',
+                    icon: '🎨',
+                    prompt: 'Jika cat Merah dicampur cat Kuning, menjadi warna apa?',
+                    visual: `<div class="flex items-center gap-2 sm:gap-4 text-3xl font-bold">
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-500 glossy-sphere"></span>
+                        <span>+</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-yellow-400 glossy-sphere"></span>
+                        <span>=</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white border-4 border-dashed border-slate-400 flex items-center justify-center text-slate-500">?</span>
+                    </div>`,
+                    options: [
+                        { label: 'Oranye', visual: `<span class="w-10 h-10 rounded-full bg-orange-500 glossy-sphere inline-block"></span>`, isCorrect: true },
+                        { label: 'Biru', visual: `<span class="w-10 h-10 rounded-full bg-blue-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Hijau', visual: `<span class="w-10 h-10 rounded-full bg-green-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Putih', visual: `<span class="w-10 h-10 rounded-full bg-slate-100 border border-slate-300 glossy-sphere inline-block"></span>`, isCorrect: false }
+                    ],
+                    explanation: 'Merah + Kuning menjadi warna Oranye seperti buah jeruk!'
+                },
+                {
+                    category: 'Mengenal Warna',
+                    badgeClass: 'bg-rose-100 text-rose-700 border-rose-300',
+                    icon: '🎨',
+                    prompt: 'Ikan paus dan langit cerah ini berwarna apa?',
+                    visual: `<div class="flex items-center gap-5"><span class="text-6xl sm:text-7xl">🐳</span><span class="text-6xl sm:text-7xl">🌊</span></div>`,
+                    options: [
+                        { label: 'Biru', visual: `<span class="w-10 h-10 rounded-full bg-sky-500 glossy-sphere inline-block"></span>`, isCorrect: true },
+                        { label: 'Kuning', visual: `<span class="w-10 h-10 rounded-full bg-yellow-400 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Cokelat', visual: `<span class="w-10 h-10 rounded-full bg-amber-800 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Merah', visual: `<span class="w-10 h-10 rounded-full bg-red-500 glossy-sphere inline-block"></span>`, isCorrect: false }
+                    ],
+                    explanation: 'Ikan paus dan air laut berwarna Biru!'
+                },
+                {
+                    category: 'Mengenal Warna',
+                    badgeClass: 'bg-rose-100 text-rose-700 border-rose-300',
+                    icon: '🎨',
+                    prompt: 'Buah anggur yang manis ini berwarna apa ya?',
+                    visual: `<div class="flex flex-col items-center"><span class="text-7xl sm:text-8xl animate-float">🍇</span></div>`,
+                    options: [
+                        { label: 'Ungu', visual: `<span class="w-10 h-10 rounded-full bg-purple-600 glossy-sphere inline-block"></span>`, isCorrect: true },
+                        { label: 'Kuning', visual: `<span class="w-10 h-10 rounded-full bg-yellow-400 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Hijau', visual: `<span class="w-10 h-10 rounded-full bg-emerald-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Oranye', visual: `<span class="w-10 h-10 rounded-full bg-orange-500 glossy-sphere inline-block"></span>`, isCorrect: false }
+                    ],
+                    explanation: 'Buah anggur ini berwarna Ungu!'
+                },
+                {
+                    category: 'Mengenal Warna',
+                    badgeClass: 'bg-rose-100 text-rose-700 border-rose-300',
+                    icon: '🎨',
+                    prompt: 'Jika cat Biru dicampur cat Kuning, menjadi warna apa?',
+                    visual: `<div class="flex items-center gap-2 sm:gap-4 text-3xl font-bold">
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-500 glossy-sphere"></span>
+                        <span>+</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-yellow-400 glossy-sphere"></span>
+                        <span>=</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white border-4 border-dashed border-slate-400 flex items-center justify-center text-slate-500">?</span>
+                    </div>`,
+                    options: [
+                        { label: 'Hijau', visual: `<span class="w-10 h-10 rounded-full bg-emerald-500 glossy-sphere inline-block"></span>`, isCorrect: true },
+                        { label: 'Merah', visual: `<span class="w-10 h-10 rounded-full bg-red-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Ungu', visual: `<span class="w-10 h-10 rounded-full bg-purple-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Oranye', visual: `<span class="w-10 h-10 rounded-full bg-orange-500 glossy-sphere inline-block"></span>`, isCorrect: false }
+                    ],
+                    explanation: 'Biru + Kuning menjadi warna Hijau!'
+                },
+                {
+                    category: 'Mengenal Warna',
+                    badgeClass: 'bg-rose-100 text-rose-700 border-rose-300',
+                    icon: '🎨',
+                    prompt: 'Wortel kesukaan kelinci berwarna apa?',
+                    visual: `<div class="flex items-center gap-4"><span class="text-6xl sm:text-7xl">🥕</span><span class="text-5xl">🐰</span></div>`,
+                    options: [
+                        { label: 'Oranye', visual: `<span class="w-10 h-10 rounded-full bg-orange-500 glossy-sphere inline-block"></span>`, isCorrect: true },
+                        { label: 'Biru', visual: `<span class="w-10 h-10 rounded-full bg-blue-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Ungu', visual: `<span class="w-10 h-10 rounded-full bg-purple-500 glossy-sphere inline-block"></span>`, isCorrect: false },
+                        { label: 'Hitam', visual: `<span class="w-10 h-10 rounded-full bg-slate-800 glossy-sphere inline-block"></span>`, isCorrect: false }
+                    ],
+                    explanation: 'Wortel berwarna Oranye cerah!'
+                },
+
+                // --- KATEGORI 2: MENGENAL BENTUK GEOMETRI (8 Soal) ---
+                {
+                    category: 'Mengenal Bentuk',
+                    badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+                    icon: '⭐',
+                    prompt: 'Bentuk puzzle mana yang cocok dengan bayangan ini?',
+                    visual: `<div class="flex items-center gap-6">
+                        ${renderShapeSVG('circle', '#94A3B8', 95)}
+                        <span class="text-lg font-bold text-slate-500">Bentuk apakah aku?</span>
+                    </div>`,
+                    options: [
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#EF4444', 52), isCorrect: true },
+                        { label: 'Persegi', visual: renderShapeSVG('square', '#3B82F6', 52), isCorrect: false },
+                        { label: 'Segitiga', visual: renderShapeSVG('triangle', '#FACC15', 52), isCorrect: false },
+                        { label: 'Bintang', visual: renderShapeSVG('star', '#22C55E', 52), isCorrect: false }
+                    ],
+                    explanation: 'Ini adalah bentuk Lingkaran yang bulat seperti bola!'
+                },
+                {
+                    category: 'Mengenal Bentuk',
+                    badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+                    icon: '⭐',
+                    prompt: 'Potongan gunung ini berbentuk seperti apa?',
+                    visual: `<div class="flex items-center gap-6">
+                        ${renderShapeSVG('triangle', '#F59E0B', 95)}
+                        <span class="text-lg font-bold text-amber-700">Punya 3 sudut!</span>
+                    </div>`,
+                    options: [
+                        { label: 'Segitiga', visual: renderShapeSVG('triangle', '#F59E0B', 52), isCorrect: true },
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#EC4899', 52), isCorrect: false },
+                        { label: 'Persegi', visual: renderShapeSVG('square', '#10B981', 52), isCorrect: false },
+                        { label: 'Hati', visual: renderShapeSVG('heart', '#EF4444', 52), isCorrect: false }
+                    ],
+                    explanation: 'Bentuk dengan 3 sisi dan 3 sudut disebut Segitiga!'
+                },
+                {
+                    category: 'Mengenal Bentuk',
+                    badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+                    icon: '⭐',
+                    prompt: 'Kotak kado ini memiliki 4 sisi sama panjang. Bentuk apakah itu?',
+                    visual: `<div class="flex items-center gap-5">
+                        <span class="text-6xl">🎁</span>
+                        ${renderShapeSVG('square', '#3B82F6', 85)}
+                    </div>`,
+                    options: [
+                        { label: 'Persegi', visual: renderShapeSVG('square', '#3B82F6', 52), isCorrect: true },
+                        { label: 'Segitiga', visual: renderShapeSVG('triangle', '#F97316', 52), isCorrect: false },
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#8B5CF6', 52), isCorrect: false },
+                        { label: 'Bintang', visual: renderShapeSVG('star', '#EAB308', 52), isCorrect: false }
+                    ],
+                    explanation: 'Kotak kado berbentuk Persegi (Segi Empat)!'
+                },
+                {
+                    category: 'Mengenal Bentuk',
+                    badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+                    icon: '⭐',
+                    prompt: 'Pasangkan bayangan puzzle di langit malam ini!',
+                    visual: `<div class="flex items-center gap-4">
+                        <span class="text-5xl">🌙</span>
+                        ${renderShapeSVG('star', '#CBD5E1', 95)}
+                    </div>`,
+                    options: [
+                        { label: 'Bintang', visual: renderShapeSVG('star', '#FACC15', 52), isCorrect: true },
+                        { label: 'Persegi', visual: renderShapeSVG('square', '#38BDF8', 52), isCorrect: false },
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#F43F5E', 52), isCorrect: false },
+                        { label: 'Segitiga', visual: renderShapeSVG('triangle', '#4ADE80', 52), isCorrect: false }
+                    ],
+                    explanation: 'Itu adalah bentuk Bintang yang berkelip di malam hari!'
+                },
+                {
+                    category: 'Mengenal Bentuk',
+                    badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+                    icon: '⭐',
+                    prompt: 'Roda mobil dan pizza bundar berbentuk seperti apa?',
+                    visual: `<div class="flex items-center gap-5"><span class="text-6xl">🍕</span><span class="text-6xl">🛞</span></div>`,
+                    options: [
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#F97316', 52), isCorrect: true },
+                        { label: 'Persegi', visual: renderShapeSVG('square', '#6366F1', 52), isCorrect: false },
+                        { label: 'Segitiga', visual: renderShapeSVG('triangle', '#14B8A6', 52), isCorrect: false },
+                        { label: 'Belah Ketupat', visual: renderShapeSVG('diamond', '#EC4899', 52), isCorrect: false }
+                    ],
+                    explanation: 'Roda dan pizza utuh berbentuk Lingkaran!'
+                },
+                {
+                    category: 'Mengenal Bentuk',
+                    badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+                    icon: '⭐',
+                    prompt: 'Temukan potongan puzzle berbentuk Hati (Love)!',
+                    visual: `<div class="flex items-center gap-4">
+                        ${renderShapeSVG('heart', '#FDA4AF', 95)}
+                        <span class="text-lg font-bold text-rose-600">Tanda Kasih Sayang</span>
+                    </div>`,
+                    options: [
+                        { label: 'Hati', visual: renderShapeSVG('heart', '#F43F5E', 52), isCorrect: true },
+                        { label: 'Bintang', visual: renderShapeSVG('star', '#FACC15', 52), isCorrect: false },
+                        { label: 'Persegi', visual: renderShapeSVG('square', '#3B82F6', 52), isCorrect: false },
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#22C55E', 52), isCorrect: false }
+                    ],
+                    explanation: 'Hebat! Itu adalah bentuk Hati berwarna merah muda!'
+                },
+                {
+                    category: 'Mengenal Bentuk',
+                    badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+                    icon: '⭐',
+                    prompt: 'Layang-layang ini berbentuk seperti puzzle yang mana?',
+                    visual: `<div class="flex items-center gap-5">
+                        <span class="text-6xl">🪁</span>
+                        ${renderShapeSVG('diamond', '#A855F7', 90)}
+                    </div>`,
+                    options: [
+                        { label: 'Belah Ketupat', visual: renderShapeSVG('diamond', '#A855F7', 52), isCorrect: true },
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#EF4444', 52), isCorrect: false },
+                        { label: 'Segitiga', visual: renderShapeSVG('triangle', '#FACC15', 52), isCorrect: false },
+                        { label: 'Hati', visual: renderShapeSVG('heart', '#EC4899', 52), isCorrect: false }
+                    ],
+                    explanation: 'Layang-layang berbentuk Belah Ketupat (Wajik)!'
+                },
+                {
+                    category: 'Mengenal Bentuk',
+                    badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+                    icon: '⭐',
+                    prompt: 'Atap rumah ini berbentuk seperti apa?',
+                    visual: `<div class="flex flex-col items-center">
+                        ${renderShapeSVG('triangle', '#EF4444', 65)}
+                        <div class="-mt-2">${renderShapeSVG('square', '#FDE047', 65)}</div>
+                    </div>`,
+                    options: [
+                        { label: 'Segitiga', visual: renderShapeSVG('triangle', '#EF4444', 52), isCorrect: true },
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#38BDF8', 52), isCorrect: false },
+                        { label: 'Bintang', visual: renderShapeSVG('star', '#FACC15', 52), isCorrect: false },
+                        { label: 'Hati', visual: renderShapeSVG('heart', '#F472B6', 52), isCorrect: false }
+                    ],
+                    explanation: 'Atap rumah di bagian atas berbentuk Segitiga!'
+                },
+
+                // --- KATEGORI 3: MENGENAL ANGKA & BERHITUNG (8 Soal) ---
+                {
+                    category: 'Angka & Berhitung',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    icon: '🔢',
+                    prompt: 'Ayo hitung, ada berapa ekor bebek lucu di kolam?',
+                    visual: `<div class="flex flex-wrap justify-center gap-3 text-5xl sm:text-6xl">
+                        <span>🦆</span><span>🦆</span><span>🦆</span>
+                    </div>`,
+                    options: [
+                        { label: '3 Bebek', visual: `<span class="text-3xl font-bold text-emerald-600">3</span>`, isCorrect: true },
+                        { label: '1 Bebek', visual: `<span class="text-3xl font-bold text-slate-600">1</span>`, isCorrect: false },
+                        { label: '5 Bebek', visual: `<span class="text-3xl font-bold text-slate-600">5</span>`, isCorrect: false },
+                        { label: '2 Bebek', visual: `<span class="text-3xl font-bold text-slate-600">2</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Mari hitung bersama: 1, 2, 3! Ada 3 ekor bebek!'
+                },
+                {
+                    category: 'Angka & Berhitung',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    icon: '🔢',
+                    prompt: 'Ada berapa buah stroberi manis di piring?',
+                    visual: `<div class="flex flex-wrap justify-center gap-2 sm:gap-3 text-4xl sm:text-5xl">
+                        <span>🍓</span><span>🍓</span><span>🍓</span><span>🍓</span><span>🍓</span>
+                    </div>`,
+                    options: [
+                        { label: '5 Stroberi', visual: `<span class="text-3xl font-bold text-rose-600">5</span>`, isCorrect: true },
+                        { label: '3 Stroberi', visual: `<span class="text-3xl font-bold text-slate-600">3</span>`, isCorrect: false },
+                        { label: '4 Stroberi', visual: `<span class="text-3xl font-bold text-slate-600">4</span>`, isCorrect: false },
+                        { label: '7 Stroberi', visual: `<span class="text-3xl font-bold text-slate-600">7</span>`, isCorrect: false }
+                    ],
+                    explanation: '1, 2, 3, 4, 5! Semuanya ada 5 buah stroberi!'
+                },
+                {
+                    category: 'Angka & Berhitung',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    icon: '🔢',
+                    prompt: 'Lengkapi urutan angka puzzle berikut: 1, 2, 3, ... ?',
+                    visual: `<div class="flex items-center gap-2 sm:gap-3">
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-sky-500 text-white text-2xl sm:text-3xl font-bold flex items-center justify-center shadow">1</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500 text-white text-2xl sm:text-3xl font-bold flex items-center justify-center shadow">2</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-500 text-white text-2xl sm:text-3xl font-bold flex items-center justify-center shadow">3</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border-4 border-dashed border-rose-400 text-rose-500 text-2xl sm:text-3xl font-bold flex items-center justify-center">?</span>
+                    </div>`,
+                    options: [
+                        { label: 'Angka 4', visual: `<span class="text-3xl font-bold text-purple-600">4</span>`, isCorrect: true },
+                        { label: 'Angka 1', visual: `<span class="text-3xl font-bold text-slate-600">1</span>`, isCorrect: false },
+                        { label: 'Angka 6', visual: `<span class="text-3xl font-bold text-slate-600">6</span>`, isCorrect: false },
+                        { label: 'Angka 8', visual: `<span class="text-3xl font-bold text-slate-600">8</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Setelah angka 1, 2, 3 adalah angka 4!'
+                },
+                {
+                    category: 'Angka & Berhitung',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    icon: '🔢',
+                    prompt: 'Hitung jumlah bintang emas di kotak ini!',
+                    visual: `<div class="grid grid-cols-4 gap-2 text-4xl sm:text-5xl">
+                        <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
+                        <span>⭐</span><span>⭐</span><span>⭐</span>
+                    </div>`,
+                    options: [
+                        { label: '7 Bintang', visual: `<span class="text-3xl font-bold text-amber-500">7</span>`, isCorrect: true },
+                        { label: '5 Bintang', visual: `<span class="text-3xl font-bold text-slate-600">5</span>`, isCorrect: false },
+                        { label: '9 Bintang', visual: `<span class="text-3xl font-bold text-slate-600">9</span>`, isCorrect: false },
+                        { label: '4 Bintang', visual: `<span class="text-3xl font-bold text-slate-600">4</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Ada 4 bintang di atas + 3 bintang di bawah = 7 Bintang!'
+                },
+                {
+                    category: 'Angka & Berhitung',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    icon: '🔢',
+                    prompt: 'Beruang punya 2 apel, lalu diberi 2 apel lagi. Berapa jumlahnya?',
+                    visual: `<div class="flex items-center gap-3 text-4xl sm:text-5xl">
+                        <div class="bg-white px-3 py-2 rounded-2xl shadow-sm">🍎🍎</div>
+                        <span class="font-bold text-emerald-600">+</span>
+                        <div class="bg-white px-3 py-2 rounded-2xl shadow-sm">🍎🍎</div>
+                    </div>`,
+                    options: [
+                        { label: '4 Apel', visual: `<span class="text-3xl font-bold text-emerald-600">4</span>`, isCorrect: true },
+                        { label: '2 Apel', visual: `<span class="text-3xl font-bold text-slate-600">2</span>`, isCorrect: false },
+                        { label: '3 Apel', visual: `<span class="text-3xl font-bold text-slate-600">3</span>`, isCorrect: false },
+                        { label: '6 Apel', visual: `<span class="text-3xl font-bold text-slate-600">6</span>`, isCorrect: false }
+                    ],
+                    explanation: '2 apel ditambah 2 apel sama dengan 4 apel!'
+                },
+                {
+                    category: 'Angka & Berhitung',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    icon: '🔢',
+                    prompt: 'Hitung jumlah jari tangan yang terbuka ini!',
+                    visual: `<div class="flex items-center gap-4 text-6xl sm:text-7xl">
+                        <span>✋</span><span>☝️</span>
+                    </div>`,
+                    options: [
+                        { label: '6 Jari', visual: `<span class="text-3xl font-bold text-sky-600">6</span>`, isCorrect: true },
+                        { label: '5 Jari', visual: `<span class="text-3xl font-bold text-slate-600">5</span>`, isCorrect: false },
+                        { label: '8 Jari', visual: `<span class="text-3xl font-bold text-slate-600">8</span>`, isCorrect: false },
+                        { label: '4 Jari', visual: `<span class="text-3xl font-bold text-slate-600">4</span>`, isCorrect: false }
+                    ],
+                    explanation: '5 jari di satu tangan + 1 jari telunjuk = 6 Jari!'
+                },
+                {
+                    category: 'Angka & Berhitung',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    icon: '🔢',
+                    prompt: 'Lengkapi urutan angka mundur: 5, 4, 3, ... ?',
+                    visual: `<div class="flex items-center gap-2 sm:gap-3">
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-purple-500 text-white text-2xl font-bold flex items-center justify-center shadow">5</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-pink-500 text-white text-2xl font-bold flex items-center justify-center shadow">4</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-orange-500 text-white text-2xl font-bold flex items-center justify-center shadow">3</span>
+                        <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border-4 border-dashed border-sky-400 text-sky-500 text-2xl font-bold flex items-center justify-center">?</span>
+                    </div>`,
+                    options: [
+                        { label: 'Angka 2', visual: `<span class="text-3xl font-bold text-emerald-600">2</span>`, isCorrect: true },
+                        { label: 'Angka 5', visual: `<span class="text-3xl font-bold text-slate-600">5</span>`, isCorrect: false },
+                        { label: 'Angka 7', visual: `<span class="text-3xl font-bold text-slate-600">7</span>`, isCorrect: false },
+                        { label: 'Angka 9', visual: `<span class="text-3xl font-bold text-slate-600">9</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Hitung mundur: 5, 4, 3, lalu angka 2!'
+                },
+                {
+                    category: 'Angka & Berhitung',
+                    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    icon: '🔢',
+                    prompt: 'Ada berapa mobil mainan yang berbaris?',
+                    visual: `<div class="flex flex-wrap justify-center gap-3 text-5xl sm:text-6xl">
+                        <span>🚗</span><span>🚕</span><span>🚙</span><span>🚌</span>
+                    </div>`,
+                    options: [
+                        { label: '4 Mobil', visual: `<span class="text-3xl font-bold text-sky-600">4</span>`, isCorrect: true },
+                        { label: '2 Mobil', visual: `<span class="text-3xl font-bold text-slate-600">2</span>`, isCorrect: false },
+                        { label: '6 Mobil', visual: `<span class="text-3xl font-bold text-slate-600">6</span>`, isCorrect: false },
+                        { label: '1 Mobil', visual: `<span class="text-3xl font-bold text-slate-600">1</span>`, isCorrect: false }
+                    ],
+                    explanation: '1, 2, 3, 4! Ada 4 kendaraan yang berbaris!'
+                },
+
+                // --- KATEGORI 4: LOGIKA DASAR (8 Soal) ---
+                {
+                    category: 'Logika Dasar',
+                    badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+                    icon: '🧩',
+                    prompt: 'Lengkapi pola gambar berikut: Apel, Pisang, Apel, ... ?',
+                    visual: `<div class="flex items-center gap-2 sm:gap-4 text-4xl sm:text-5xl">
+                        <span class="bg-white p-2.5 rounded-2xl shadow-sm">🍎</span>
+                        <span class="bg-white p-2.5 rounded-2xl shadow-sm">🍌</span>
+                        <span class="bg-white p-2.5 rounded-2xl shadow-sm">🍎</span>
+                        <span class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border-4 border-dashed border-purple-400 flex items-center justify-center text-2xl font-bold text-purple-500">?</span>
+                    </div>`,
+                    options: [
+                        { label: 'Pisang', visual: `<span class="text-4xl">🍌</span>`, isCorrect: true },
+                        { label: 'Apel', visual: `<span class="text-4xl">🍎</span>`, isCorrect: false },
+                        { label: 'Mobil', visual: `<span class="text-4xl">🚗</span>`, isCorrect: false },
+                        { label: 'Bola', visual: `<span class="text-4xl">⚽</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Polanya bergantian: Apel - Pisang - Apel - Pisang!'
+                },
+                {
+                    category: 'Logika Dasar',
+                    badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+                    icon: '🧩',
+                    prompt: 'Manakah benda yang BERBEDA sendiri di kelompok ini?',
+                    visual: `<div class="flex items-center gap-3 sm:gap-5 text-5xl sm:text-6xl">
+                        <span class="bg-white p-3 rounded-2xl shadow-sm">🐶</span>
+                        <span class="bg-white p-3 rounded-2xl shadow-sm">🐱</span>
+                        <span class="bg-white p-3 rounded-2xl shadow-sm">🐰</span>
+                        <span class="bg-white p-3 rounded-2xl shadow-sm">🚌</span>
+                    </div>`,
+                    options: [
+                        { label: 'Bus (Kendaraan)', visual: `<span class="text-4xl">🚌</span>`, isCorrect: true },
+                        { label: 'Anjing', visual: `<span class="text-4xl">🐶</span>`, isCorrect: false },
+                        { label: 'Kucing', visual: `<span class="text-4xl">🐱</span>`, isCorrect: false },
+                        { label: 'Kelinci', visual: `<span class="text-4xl">🐰</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Anjing, Kucing, dan Kelinci adalah hewan, sedangkan Bus adalah kendaraan!'
+                },
+                {
+                    category: 'Logika Dasar',
+                    badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+                    icon: '🧩',
+                    prompt: 'Di luar sedang turun hujan deras. Benda apa yang harus kita pakai?',
+                    visual: `<div class="flex items-center gap-4">
+                        <span class="text-6xl sm:text-7xl">🌧️</span>
+                        <span class="text-4xl">🧒</span>
+                        <span class="text-2xl font-bold text-sky-700">Pakai apa ya?</span>
+                    </div>`,
+                    options: [
+                        { label: 'Payung', visual: `<span class="text-4xl">☂️</span>`, isCorrect: true },
+                        { label: 'Es Krim', visual: `<span class="text-4xl">🍦</span>`, isCorrect: false },
+                        { label: 'Kacamata Hitam', visual: `<span class="text-4xl">🕶️</span>`, isCorrect: false },
+                        { label: 'Layangan', visual: `<span class="text-4xl">🪁</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Saat hujan turun, kita memakai Payung agar tidak basah!'
+                },
+                {
+                    category: 'Logika Dasar',
+                    badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+                    icon: '🧩',
+                    prompt: 'Kelinci kecil lapar sekali. Makanan apa yang cocok untuk kelinci?',
+                    visual: `<div class="flex items-center gap-4">
+                        <span class="text-6xl sm:text-7xl">🐰</span>
+                        <span class="text-3xl font-bold text-amber-600">➡️ ❓</span>
+                    </div>`,
+                    options: [
+                        { label: 'Wortel', visual: `<span class="text-4xl">🥕</span>`, isCorrect: true },
+                        { label: 'Tulang', visual: `<span class="text-4xl">🦴</span>`, isCorrect: false },
+                        { label: 'Batu', visual: `<span class="text-4xl">🪨</span>`, isCorrect: false },
+                        { label: 'Sepatu', visual: `<span class="text-4xl">👟</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Kelinci suka sekali makan Wortel yang renyah!'
+                },
+                {
+                    category: 'Logika Dasar',
+                    badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+                    icon: '🧩',
+                    prompt: 'Lengkapi pola bentuk ini: Lingkaran, Bintang, Lingkaran, ... ?',
+                    visual: `<div class="flex items-center gap-2 sm:gap-3">
+                        <span class="bg-white p-2 rounded-2xl shadow-sm">${renderShapeSVG('circle', '#3B82F6', 48)}</span>
+                        <span class="bg-white p-2 rounded-2xl shadow-sm">${renderShapeSVG('star', '#FACC15', 48)}</span>
+                        <span class="bg-white p-2 rounded-2xl shadow-sm">${renderShapeSVG('circle', '#3B82F6', 48)}</span>
+                        <span class="w-14 h-14 rounded-2xl bg-white border-4 border-dashed border-purple-400 flex items-center justify-center text-xl font-bold text-purple-500">?</span>
+                    </div>`,
+                    options: [
+                        { label: 'Bintang', visual: renderShapeSVG('star', '#FACC15', 46), isCorrect: true },
+                        { label: 'Lingkaran', visual: renderShapeSVG('circle', '#3B82F6', 46), isCorrect: false },
+                        { label: 'Persegi', visual: renderShapeSVG('square', '#EF4444', 46), isCorrect: false },
+                        { label: 'Segitiga', visual: renderShapeSVG('triangle', '#22C55E', 46), isCorrect: false }
+                    ],
+                    explanation: 'Setelah Lingkaran - Bintang - Lingkaran, berikutnya adalah Bintang!'
+                },
+                {
+                    category: 'Logika Dasar',
+                    badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+                    icon: '🧩',
+                    prompt: 'Manakah hewan yang paling BESAR ukurannya?',
+                    visual: `<div class="flex items-end gap-4 text-5xl sm:text-6xl">
+                        <span>🐜</span><span>🐭</span><span>🐘</span><span>🐥</span>
+                    </div>`,
+                    options: [
+                        { label: 'Gajah', visual: `<span class="text-4xl">🐘</span>`, isCorrect: true },
+                        { label: 'Semut', visual: `<span class="text-4xl">🐜</span>`, isCorrect: false },
+                        { label: 'Tikus', visual: `<span class="text-4xl">🐭</span>`, isCorrect: false },
+                        { label: 'Anak Ayam', visual: `<span class="text-4xl">🐥</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Gajah adalah hewan yang tubuhnya paling besar!'
+                },
+                {
+                    category: 'Logika Dasar',
+                    badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+                    icon: '🧩',
+                    prompt: 'Sebelum tidur di malam hari, kita harus menggosok gigi dengan...',
+                    visual: `<div class="flex items-center gap-4">
+                        <span class="text-6xl">🦷</span>
+                        <span class="text-5xl">✨</span>
+                    </div>`,
+                    options: [
+                        { label: 'Sikat Gigi', visual: `<span class="text-4xl">🪥</span>`, isCorrect: true },
+                        { label: 'Sendok Makan', visual: `<span class="text-4xl">🥄</span>`, isCorrect: false },
+                        { label: 'Sisir Rambut', visual: `<span class="text-4xl">🪮</span>`, isCorrect: false },
+                        { label: 'Pensil', visual: `<span class="text-4xl">✏️</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Kita menggunakan Sikat Gigi supaya gigi bersih dan sehat!'
+                },
+                {
+                    category: 'Logika Dasar',
+                    badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+                    icon: '🧩',
+                    prompt: 'Manakah yang BUKAN buah-buahan?',
+                    visual: `<div class="flex items-center gap-3 sm:gap-5 text-5xl sm:text-6xl">
+                        <span class="bg-white p-3 rounded-2xl shadow-sm">🍉</span>
+                        <span class="bg-white p-3 rounded-2xl shadow-sm">🍊</span>
+                        <span class="bg-white p-3 rounded-2xl shadow-sm">⚽</span>
+                        <span class="bg-white p-3 rounded-2xl shadow-sm">🍍</span>
+                    </div>`,
+                    options: [
+                        { label: 'Bola Sepak', visual: `<span class="text-4xl">⚽</span>`, isCorrect: true },
+                        { label: 'Semangka', visual: `<span class="text-4xl">🍉</span>`, isCorrect: false },
+                        { label: 'Jeruk', visual: `<span class="text-4xl">🍊</span>`, isCorrect: false },
+                        { label: 'Nanas', visual: `<span class="text-4xl">🍍</span>`, isCorrect: false }
+                    ],
+                    explanation: 'Bola sepak adalah mainan, sedangkan Semangka, Jeruk, dan Nanas adalah buah!'
+                }
+            ];
+
+            return pool;
+        }
+
+        /* =========================================================================
+         * 4. GAME STATE & CORE LOGIC
+         * ========================================================================= */
+        const TOTAL_QUESTIONS = 20;
+        let gameState = {
+            playerName: '',
+            questions: [],
+            currentIndex: 0,
+            score: 0,
+            correctCount: 0,
+            wrongCount: 0,
+            answeredCurrent: false
+        };
+
+        // Utility: Fisher-Yates Shuffle
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Start Screen Input Validation
+        const nameInput = document.getElementById('player-name-input');
+        const startBtn = document.getElementById('btn-start-game');
+        const helperText = document.getElementById('name-helper-text');
+
+        nameInput.addEventListener('input', () => {
+            const val = nameInput.value.trim();
+            if (val.length > 0) {
+                startBtn.disabled = false;
+                helperText.textContent = `Halo ${val}! Klik tombol hijau di bawah untuk mulai! 🎉`;
+                helperText.classList.remove('text-sky-600');
+                helperText.classList.add('text-emerald-600');
+            } else {
+                startBtn.disabled = true;
+                helperText.textContent = '*Isi nama dulu ya supaya tombol bermain menyala! 🌟';
+                helperText.classList.remove('text-emerald-600');
+                helperText.classList.add('text-sky-600');
+            }
+        });
+
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !startBtn.disabled) {
+                startGame();
+            }
+        });
+
+        function startGame() {
+            const rawName = nameInput.value.trim();
+            if (!rawName) return;
+
+            SoundEngine.playClick();
+            gameState.playerName = rawName;
+            prepareNewSession();
+
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-end').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            document.getElementById('hud-player-name').textContent = gameState.playerName;
+            renderQuestion();
+        }
+
+        function prepareNewSession() {
+            const fullPool = buildQuestionPool();
+            // Select 20 random questions and shuffle each question's answer options
+            const selected = shuffleArray(fullPool).slice(0, TOTAL_QUESTIONS).map(q => ({
+                ...q,
+                options: shuffleArray(q.options)
+            }));
+
+            gameState.questions = selected;
+            gameState.currentIndex = 0;
+            gameState.score = 0;
+            gameState.correctCount = 0;
+            gameState.wrongCount = 0;
+            gameState.answeredCurrent = false;
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-question-num').textContent = gameState.currentIndex + 1;
+            document.getElementById('hud-score').textContent = gameState.score;
+            const pct = ((gameState.currentIndex + 1) / TOTAL_QUESTIONS) * 100;
+            document.getElementById('hud-progress-bar').style.width = `${pct}%`;
+        }
+
+        function renderQuestion() {
+            gameState.answeredCurrent = false;
+            updateHUD();
+
+            const q = gameState.questions[gameState.currentIndex];
+
+            // Category Badge
+            const badge = document.getElementById('question-category-badge');
+            badge.className = `inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold border-2 ${q.badgeClass}`;
+            badge.innerHTML = `<span>${q.icon}</span> <span>${q.category}</span>`;
+
+            // Reset Mascot Pill
+            const mascots = ['🐻', '🐰', '🦁', '🦉'];
+            document.getElementById('mascot-emoji').textContent = mascots[gameState.currentIndex % mascots.length];
+            document.getElementById('mascot-hint').textContent = `Ayo ${gameState.playerName}, kamu pasti bisa!`;
+
+            // Prompt & Visual Stage
+            document.getElementById('question-text').textContent = q.prompt;
+            document.getElementById('puzzle-visual-stage').innerHTML = q.visual;
+
+            // Hide Feedback Banner
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.classList.add('hidden');
+
+            // Render 4 Options
+            const optionsGrid = document.getElementById('options-grid');
+            optionsGrid.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'puzzle-option p-4 sm:p-5 flex flex-col items-center justify-center gap-2 min-h-[105px] sm:min-h-[120px]';
+                btn.innerHTML = `
+                    <div class="flex items-center justify-center">${opt.visual}</div>
+                    <span class="text-base sm:text-xl font-bold text-slate-800">${opt.label}</span>
+                `;
+                btn.onclick = () => handleAnswer(idx, btn);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedIndex, selectedButton) {
+            if (gameState.answeredCurrent) return;
+            gameState.answeredCurrent = true;
+
+            const q = gameState.questions[gameState.currentIndex];
+            const chosenOption = q.options[selectedIndex];
+            const allOptionButtons = document.querySelectorAll('#options-grid .puzzle-option');
+
+            // Disable all option buttons and highlight correct answer
+            allOptionButtons.forEach((btn, idx) => {
+                btn.classList.add('disabled');
+                if (q.options[idx].isCorrect) {
+                    btn.classList.add('correct-choice');
+                }
+            });
+
+            const feedbackBox = document.getElementById('feedback-box');
+            const feedbackIcon = document.getElementById('feedback-icon');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const nextBtn = document.getElementById('btn-next-question');
+
+            nextBtn.textContent = (gameState.currentIndex === TOTAL_QUESTIONS - 1) ? 'Lihat Hasil 🏆' : 'Lanjut ➡️';
+
+            if (chosenOption.isCorrect) {
+                // +10 Points
+                gameState.score += 10;
+                gameState.correctCount += 1;
+                SoundEngine.playCorrect();
+                triggerMascotReaction('happy');
+
+                document.getElementById('mascot-emoji').textContent = '🥳';
+                document.getElementById('mascot-hint').textContent = 'Horeee! Benar!';
+
+                feedbackBox.className = 'mt-5 rounded-3xl p-4 sm:p-5 border-4 bg-emerald-50 border-emerald-400 text-emerald-900';
+                feedbackIcon.textContent = '🌟';
+                feedbackTitle.textContent = `Hebat sekali, ${gameState.playerName}! (+10 Poin)`;
+                feedbackMessage.textContent = q.explanation;
+            } else {
+                // -10 Points (as specified: +10 if correct, -10 if wrong)
+                gameState.score -= 10;
+                gameState.wrongCount += 1;
+                selectedButton.classList.add('wrong-choice');
+                SoundEngine.playWrong();
+                triggerMascotReaction('encourage');
+
+                document.getElementById('mascot-emoji').textContent = '🤗';
+                document.getElementById('mascot-hint').textContent = 'Tetap semangat ya!';
+
+                const correctLabel = q.options.find(o => o.isCorrect).label;
+                feedbackBox.className = 'mt-5 rounded-3xl p-4 sm:p-5 border-4 bg-amber-50 border-amber-400 text-amber-950';
+                feedbackIcon.textContent = '💡';
+                feedbackTitle.textContent = `Hampir tepat, ${gameState.playerName}! (-10 Poin)`;
+                feedbackMessage.textContent = `Jawaban yang benar adalah "${correctLabel}". ${q.explanation}`;
+            }
+
+            updateHUD();
+            feedbackBox.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            SoundEngine.playClick();
+            if (gameState.currentIndex < TOTAL_QUESTIONS - 1) {
+                gameState.currentIndex++;
+                renderQuestion();
+            } else {
+                showEndScreen();
+            }
+        }
+
+        function showEndScreen() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-end').classList.remove('hidden');
+
+            SoundEngine.playVictory();
+            triggerMascotReaction('happy');
+            launchConfetti();
+
+            document.getElementById('end-congrats-title').textContent = `Selamat, ${gameState.playerName}! 🎉`;
+            document.getElementById('end-final-score').textContent = gameState.score;
+            document.getElementById('end-correct-count').textContent = `${gameState.correctCount} Soal`;
+            document.getElementById('end-wrong-count').textContent = `${gameState.wrongCount} Soal`;
+
+            // Calculate Star Rating (1 to 3 stars based on correct answers out of 20)
+            const starsEl = document.getElementById('end-stars');
+            const quoteEl = document.getElementById('end-mascot-quote');
+
+            if (gameState.correctCount >= 16) {
+                starsEl.innerHTML = '<span>⭐</span><span>⭐</span><span>⭐</span>';
+                quoteEl.textContent = `"Luar biasa ${gameState.playerName}! Kamu juara puzzle ceria hari ini!"`;
+            } else if (gameState.correctCount >= 10) {
+                starsEl.innerHTML = '<span>⭐</span><span>⭐</span><span class="opacity-30">⭐</span>';
+                quoteEl.textContent = `"Bagus sekali ${gameState.playerName}! Kamu sudah mengenal banyak warna, bentuk, dan angka!"`;
+            } else {
+                starsEl.innerHTML = '<span>⭐</span><span class="opacity-30">⭐</span><span class="opacity-30">⭐</span>';
+                quoteEl.textContent = `"Terima kasih sudah bermain ${gameState.playerName}! Ayo coba lagi supaya makin jago!"`;
+            }
+        }
+
+        function restartGame() {
+            SoundEngine.playClick();
+            stopConfetti();
+            prepareNewSession();
+            document.getElementById('screen-end').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            renderQuestion();
+        }
+
+        /* =========================================================================
+         * 5. COLORFUL CELEBRATION CONFETTI EFFECT
+         * ========================================================================= */
+        let confettiParticles = [];
+        let confettiAnimId = null;
+
+        function launchConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const colors = ['#F43F5E', '#FACC15', '#4ADE80', '#38BDF8', '#A855F7', '#FB923C'];
+            confettiParticles = [];
+
+            for (let i = 0; i < 120; i++) {
+                confettiParticles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    w: Math.random() * 12 + 6,
+                    h: Math.random() * 8 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    speedY: Math.random() * 3 + 2,
+                    speedX: Math.random() * 2 - 1,
+                    rotation: Math.random() * 360,
+                    rotSpeed: Math.random() * 6 - 3
+                });
+            }
+
+            function renderConfetti() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                confettiParticles.forEach(p => {
+                    p.y += p.speedY;
+                    p.x += p.speedX;
+                    p.rotation += p.rotSpeed;
+
+                    if (p.y > canvas.height) {
+                        p.y = -20;
+                        p.x = Math.random() * canvas.width;
+                    }
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate((p.rotation * Math.PI) / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                    ctx.restore();
+                });
+                confettiAnimId = requestAnimationFrame(renderConfetti);
+            }
+
+            renderConfetti();
+        }
+
+        function stopConfetti() {
+            if (confettiAnimId) {
+                cancelAnimationFrame(confettiAnimId);
+                confettiAnimId = null;
+            }
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Start 3D Engine on Window Load
+        window.onload = function () {
+            init3DWorld();
+            animate3D();
+        };
+    </script>
+</body>
+</html>
